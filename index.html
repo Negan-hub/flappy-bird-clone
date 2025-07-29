@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flappy Bird Clone</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: black;
+      font-family: 'Press Start 2P', sans-serif;
+    }
+    canvas {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    let bird = {
+      x: 100,
+      y: canvas.height / 2,
+      width: 30,
+      height: 30,
+      gravity: 0.3,
+      velocity: 0,
+      lift: -6
+    };
+
+    let pipes = [];
+    let pipeWidth = 60;
+    let pipeGap = 150;
+    let pipeSpeed = 1.2;
+    let frame = 0;
+    let gameOver = false;
+    let gameStarted = false;
+
+    const flapSound = new Audio('https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg');
+    const hitSound = new Audio('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg');
+
+    function drawBird() {
+      ctx.fillStyle = "yellow";
+      ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = "green";
+      pipes.forEach(pipe => {
+        ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+        ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom);
+      });
+    }
+
+    function drawBorders() {
+      ctx.fillStyle = "red";
+      ctx.fillRect(0, 0, canvas.width, 5);
+      ctx.fillRect(0, canvas.height - 5, canvas.width, 5);
+    }
+
+    function update() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (!gameStarted) {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "white";
+        ctx.font = "48px 'Press Start 2P', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Flappy Box", canvas.width / 2, canvas.height / 2 - 40);
+        ctx.font = "24px 'Press Start 2P', sans-serif";
+        ctx.fillText("Press Space or Tap to Start", canvas.width / 2, canvas.height / 2 + 40);
+        requestAnimationFrame(update);
+        return;
+      }
+
+      if (gameOver) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "white";
+        ctx.font = "36px 'Press Start 2P', sans-serif";
+        ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 20);
+        ctx.font = "18px 'Press Start 2P', sans-serif";
+        ctx.fillText("Press Space or Tap to Restart", canvas.width / 2, canvas.height / 2 + 20);
+        return;
+      }
+
+      bird.velocity += bird.gravity;
+      if (bird.velocity > 5) bird.velocity = 5;
+      bird.y += bird.velocity;
+
+      if (bird.y < 5 || bird.y + bird.height > canvas.height - 5) {
+        gameOver = true;
+        hitSound.play();
+      }
+
+      if (frame % 120 === 0) {
+        let top = Math.random() * (canvas.height / 2);
+        let bottom = top + pipeGap;
+        pipes.push({ x: canvas.width, top: top, bottom: bottom });
+      }
+
+      pipes.forEach(pipe => {
+        pipe.x -= pipeSpeed;
+        if (
+          bird.x < pipe.x + pipeWidth &&
+          bird.x + bird.width > pipe.x &&
+          (bird.y < pipe.top || bird.y + bird.height > pipe.bottom)
+        ) {
+          gameOver = true;
+          hitSound.play();
+        }
+      });
+
+      pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
+
+      drawBird();
+      drawPipes();
+      drawBorders();
+      frame++;
+      requestAnimationFrame(update);
+    }
+
+    function handleInput() {
+      if (!gameStarted) {
+        gameStarted = true;
+        update();
+        return;
+      }
+      if (gameOver) {
+        resetGame();
+        return;
+      }
+      bird.velocity = bird.lift;
+      flapSound.currentTime = 0;
+      flapSound.play();
+    }
+
+    function resetGame() {
+      bird.y = canvas.height / 2;
+      bird.velocity = 0;
+      pipes = [];
+      frame = 0;
+      gameOver = false;
+      update();
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") handleInput();
+    });
+
+    document.addEventListener("touchstart", handleInput);
+  </script>
+</body>
+</html>
